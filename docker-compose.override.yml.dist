@@ -1,0 +1,43 @@
+version: '3.7'
+
+x-xdebug-env: &xdebug-env
+  XDEBUG_PORT: 9001
+  XDEBUG_REMOTE_HOST: YOUR_IP
+  # Xdebug2
+  XDEBUG_IDE_KEY: PHPSTORM
+  XDEBUG_ENABLED: 1
+  # Xdebug3
+  # https://xdebug.org/docs/step_debug#mode
+  XDEBUG_MODE: 'debug'
+  # https://xdebug.org/docs/step_debug#start_with_request
+  XDEBUG_STARTS_WITH_REQUEST: 'yes'
+
+services:
+  db:
+    ports:
+      - 33066:3306
+
+  db-test:
+    image: mysql:8.0
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: test
+      MYSQL_USER: user
+      MYSQL_PASSWORD: pass
+    tmpfs:
+      - /var/lib/mysql
+    ports:
+      - "33067:3306"
+
+  api-php:
+    build:
+      target: dev
+    environment:
+      <<: *xdebug-env
+      PHP_IDE_CONFIG: serverName=api
+    volumes:
+      - ./xdebug3.ini:/usr/local/etc/php/conf.d/xdebug.ini
+
+  api:
+    ports:
+      - "7080:80"

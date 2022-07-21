@@ -1,0 +1,53 @@
+version: '3.7'
+
+services:
+  db:
+    image: mysql:8.0
+    command: --sql_mode=NO_ENGINE_SUBSTITUTION
+    volumes:
+      - db-data:/var/lib/mysql:rw
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+
+  redis:
+    image: redis:alpine
+
+  api-php:
+    build:
+      context: ../api
+      dockerfile: Dockerfile
+      target: prod
+    entrypoint: /usr/local/bin/docker-entrypoint.sh
+    command: php-fpm
+    depends_on:
+      - db
+      - redis
+    environment:
+      APP_ENV: local
+      DB_HOST: ${DB_HOST}
+      DB_USERNAME: ${DB_USER}
+      DB_PASSWORD: ${DB_PASSWORD}
+      DB_DATABASE: ${DB_NAME}
+      REDIS_HOST: ${REDIS_HOST}
+    volumes:
+      - ../api:/var/www
+      - ./local.ini:/usr/local/etc/php/conf.d/local.ini
+      - ./api/php-fpm/docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh
+
+  api:
+    image: nginx:latest
+    volumes:
+      - ../api:/var/www/
+      - ../docker/api/nginx/conf.d:/etc/nginx/conf.d
+    ports:
+      - 7080:80
+    depends_on:
+      - api-php
+    environment:
+      WEB_PHP_SOCKET: api-php:9000
+      WEB_DOCUMENT_ROOT: /var/www/public
+      WEB_PHP_TIMEOUT: 60
+      WEB_ALIAS_DOMAIN: api.loc
+
+volumes:
+  db-data: {}
